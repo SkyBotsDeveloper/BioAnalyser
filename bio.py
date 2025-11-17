@@ -61,7 +61,7 @@ async def help_handler(client: Client, message):
         "`/free` – whitelist a user (reply or user/id)\n"
         "`/unfree` – remove from whitelist\n"
         "`/freelist` – list all whitelisted users\n\n"
-        "**When someone with a URL in their bio posts, I’ll:**\n"
+        "**When someone with a URL in their bio posts, I'll:**\n"
         " 1. ⚠️ Warn them\n"
         " 2. 🔇 Mute if they exceed limit\n"
         " 3. 🔨 Ban if set to ban\n\n"
@@ -106,7 +106,10 @@ async def command_free(client: Client, message):
         target = message.reply_to_message.from_user
     elif len(message.command) > 1:
         arg = message.command[1]
-        target = await client.get_users(int(arg) if arg.isdigit() else arg)
+        try:
+            target = await client.get_users(int(arg) if arg.isdigit() else arg)
+        except Exception as e:
+            return await client.send_message(chat_id, "❌ **User not found or invalid ID.**")
     else:
         return await client.send_message(chat_id, "**Reply or use /free user or id to whitelist someone.**")
 
@@ -133,7 +136,10 @@ async def command_unfree(client: Client, message):
         target = message.reply_to_message.from_user
     elif len(message.command) > 1:
         arg = message.command[1]
-        target = await client.get_users(int(arg) if arg.isdigit() else arg)
+        try:
+            target = await client.get_users(int(arg) if arg.isdigit() else arg)
+        except Exception as e:
+            return await client.send_message(chat_id, "❌ **User not found or invalid ID.**")
     else:
         return await client.send_message(chat_id, "**Reply or use /unfree user or id to unwhitelist someone.**")
 
@@ -316,49 +322,39 @@ async def check_bio(client: Client, message):
         try:
             await message.delete()
         except errors.MessageDeleteForbidden:
-            return await message.reply_text("Please grant me delete permission.")
+            return await message.reply_text("❌ Please grant me delete permission.")
 
-        mode, limit, penalty = await get_config(chat_id)
-        if mode == "warn":
-            count = await increment_warning(chat_id, user_id)
-            warning_text = (
-                "**🚨 Warning Issued** 🚨\n\n"
-                f"👤 **User:** {mention} `[ {user_id} ]`\n"
-                "❌ **Reason:** URL found in bio\n"
-                f"⚠️ **Warning:** {count}/{limit}\n\n"
-                "**Notice: Please remove any links from your bio (apne bio se link hatane ka kripa kare).**"
-            )
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("❌ Cancel Warning", callback_data=f"cancel_warn_{user_id}"),
-                 InlineKeyboardButton("✅ Whitelist", callback_data=f"whitelist_{user_id}")],
-                [InlineKeyboardButton("🗑️ Close", callback_data="close")]
-            ])
-            sent = await message.reply_text(warning_text, reply_markup=keyboard)
-            if count >= limit:
-                try:
-                    if penalty == "mute":
-                        await client.restrict_chat_member(chat_id, user_id, ChatPermissions())
-                        kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unmute ✅", callback_data=f"unmute_{user_id}")]])
-                        await sent.edit_text(f"**{user_name} has been 🔇 muted for [Link In Bio].**", reply_markup=kb)
-                    else:
-                        await client.ban_chat_member(chat_id, user_id)
-                        kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unban ✅", callback_data=f"unban_{user_id}")]])
-                        await sent.edit_text(f"**{user_name} has been 🔨 banned for [Link In Bio].**", reply_markup=kb)
-                
-                except errors.ChatAdminRequired:
-                    await sent.edit_text(f"**I don't have permission to {penalty} users.**")
-        else:
+        _, limit, penalty = await get_config(chat_id)
+        count = await increment_warning(chat_id, user_id)
+        
+        warning_text = (
+            "**🚨 Warning Issued** 🚨\n\n"
+            f"👤 **User:** {mention} `[ {user_id} ]`\n"
+            "❌ **Reason:** URL found in bio\n"
+            f"⚠️ **Warning:** {count}/{limit}\n\n"
+            "**Notice: Please remove any links from your bio (apne bio se link hatane ka kripa kare).**"
+        )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ Cancel Warning", callback_data=f"cancel_warn_{user_id}"),
+             InlineKeyboardButton("✅ Whitelist", callback_data=f"whitelist_{user_id}")],
+            [InlineKeyboardButton("🗑️ Close", callback_data="close")]
+        ])
+        sent = await message.reply_text(warning_text, reply_markup=keyboard)
+        
+        # Apply penalty if warning limit reached
+        if count >= limit:
             try:
-                if mode == "mute":
+                if penalty == "mute":
                     await client.restrict_chat_member(chat_id, user_id, ChatPermissions())
-                    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unmute", callback_data=f"unmute_{user_id}")]])
-                    await message.reply_text(f"{user_name} has been 🔇 muted for [Link In Bio].", reply_markup=kb)
+                    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unmute ✅", callback_data=f"unmute_{user_id}")]])
+                    await sent.edit_text(f"**{mention} has been 🔇 muted for [Link In Bio].**", reply_markup=kb)
                 else:
                     await client.ban_chat_member(chat_id, user_id)
-                    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unban", callback_data=f"unban_{user_id}")]])
-                    await message.reply_text(f"{user_name} has been 🔨 banned for [Link In Bio].", reply_markup=kb)
+                    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Unban ✅", callback_data=f"unban_{user_id}")]])
+                    await sent.edit_text(f"**{mention} has been 🔨 banned for [Link In Bio].**", reply_markup=kb)
+            
             except errors.ChatAdminRequired:
-                return await message.reply_text(f"I don't have permission to {mode} users.")
+                await sent.edit_text(f"**❌ I don't have permission to {penalty} users.**")
     else:
         await reset_warnings(chat_id, user_id)
 
