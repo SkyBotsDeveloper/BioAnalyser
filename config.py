@@ -37,6 +37,9 @@ if not all([API_ID, API_HASH, BOT_TOKEN, MONGO_URI]):
 DEFAULT_WARNING_LIMIT = 5  # Number of warnings before punishment
 DEFAULT_PUNISHMENT = "mute"  # Options: "mute" or "ban"
 
+# Default configuration tuple (mode, limit, penalty)
+DEFAULT_CONFIG = ('warn', DEFAULT_WARNING_LIMIT, DEFAULT_PUNISHMENT)
+
 # ============================================
 # URL DETECTION PATTERN
 # ============================================
@@ -52,6 +55,6 @@ URL_PATTERN = re.compile(
         r'www\.[a-zA-Z0-9.\-]+(?:[/?#][^\s]*)?|'  # www.example.com
         r'(?:bit\.ly|ow\.ly|tinyurl\.com|short\.link|goo\.gl|is\.gd)/[a-zA-Z0-9.\-_]+|'  # URL shorteners
         r'(?:instagram|tiktok|twitter|facebook|youtube|linkedin)\.com/[a-zA-Z0-9.\-_~:/?#@!$&\'()*+,;=%]+|'  # Social media
-        r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\.)+(?:com|org|net|io|co|uk|app|dev|shop)(?:[/?#][^\s]*)?'  # Domain names
+        r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\\\\-]{0,61}[a-zA-Z0-9])?\.)+(?:com|org|net|io|co|uk|app|dev|shop)(?:[/?#][^\s]*)?'  # Domain names
     r')'
 )
