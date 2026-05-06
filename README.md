@@ -343,8 +343,8 @@ This project is provided as-is for educational and personal use.
 
 ## 👤 Author
 
-- **Name:** Elite Sid
-- **Telegram:** [@EliteSid](https://t.me/EliteSid)
+- **Name:** Siddhartha Abhimanyu
+- **Telegram:** [@IflexElite](https://t.me/IflexElite)
 - **Channel:** [@VivaanUpdates](https://t.me/VivaanUpdates)
 - **Support:** [@VivaanSupport](https://t.me/VivaanSupport)
 
@@ -379,7 +379,7 @@ If you find this bot helpful:
 ---
 
 <p align="center">
-  <strong>Made with ❤️ by <a href="https://t.me/EliteSid">Elite Sid</a></strong>
+  <strong>Made with ❤️ by <a href="https://t.me/Iflexelite">Siddhartha</a></strong>
 </p>
 
 <p align="center">
