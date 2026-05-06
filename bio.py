@@ -704,14 +704,22 @@ async def start_handler(client: Client, message):
 @guarded_handler("help")
 async def help_handler(client: Client, message):
     chat_id = message.chat.id
+    owner_help = ""
+    if message.from_user and is_owner(message.from_user.id):
+        owner_help = (
+            "\n"
+            "**Owner Commands:**\n"
+            "`/stats` - bot stats\n"
+            "`/broadcast` - broadcast to known active chats\n\n"
+        )
+
     help_text = (
         "**Bot Commands & Usage**\n\n"
         "`/config` - set warn-limit & punishment mode\n"
         "`/free` - whitelist a user (reply or user/id)\n"
         "`/unfree` - remove from whitelist\n"
         "`/freelist` - list all whitelisted users\n"
-        "`/stats` - owner-only bot stats\n"
-        "`/broadcast` - owner-only broadcast\n\n"
+        f"{owner_help}"
         "**When someone with a URL in their bio posts, I'll:**\n"
         " 1. Warn them\n"
         " 2. Mute if they exceed limit\n"

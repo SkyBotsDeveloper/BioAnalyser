@@ -173,6 +173,7 @@ You can still use `tmux` if you want a terminal session, but `systemd` is what k
 
 The bot records chats after it receives updates from them. If a group/channel/DM has never interacted with this bot version, it will not be in the broadcast list yet.
 When Telegram sends a bot removal update, the removed chat is deleted from MongoDB so `/stats` stays current.
+Owner commands are only shown in `/help` when the user is listed in `OWNER_ID` or `OWNER_IDS`.
 
 ### Step 4: How It Works
 
