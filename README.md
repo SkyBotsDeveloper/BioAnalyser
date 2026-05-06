@@ -87,12 +87,14 @@ API_ID=your_api_id_here
 API_HASH=your_api_hash_here
 BOT_TOKEN=your_bot_token_here
 MONGO_URI=your_mongodb_connection_string_here
+OWNER_ID=your_telegram_user_id
 ```
 
 **How to get these values:**
 - **API_ID & API_HASH**: Visit [my.telegram.org](https://my.telegram.org) → API Development Tools
 - **BOT_TOKEN**: Chat with [@BotFather](https://t.me/BotFather) on Telegram → `/start` → Create Bot
 - **MONGO_URI**: Create account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) → Create Cluster → Copy connection string
+- **OWNER_ID**: Your numeric Telegram user ID. For multiple owners, use `OWNER_IDS=111,222,333`
 
 ### ⚠️ Important: Keep `.env` Secure
 
@@ -111,6 +113,32 @@ If successful, you should see:
 ```
 Bot is running... ✅
 ```
+
+## VPS Permanent Start
+
+After cloning on Ubuntu/Debian VPS:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip && pip install -r requirements.txt
+sudo apt update && sudo apt install tmux -y
+tmux
+bash start
+```
+
+`bash start` installs a `systemd` service named `bioanalyser-bot`, starts the bot now, restarts it if it crashes, and starts it again automatically after VPS reboot.
+
+Useful commands:
+
+```bash
+sudo journalctl -u bioanalyser-bot -f
+sudo systemctl status bioanalyser-bot
+sudo systemctl restart bioanalyser-bot
+sudo systemctl stop bioanalyser-bot
+```
+
+You can still use `tmux` if you want a terminal session, but `systemd` is what keeps the bot permanent after reboot.
 
 ## 🎮 Usage
 
@@ -136,6 +164,15 @@ Bot is running... ✅
 - `/unfree [reply|id|@username]` - Remove user from whitelist
 - `/freelist` - View all whitelisted users
 - `/help` - Show help message
+
+**Owner Only:**
+
+- `/broadcast your message` - Send a text broadcast to every known active DM/group/channel
+- Reply to any message with `/broadcast` - Copy that message to every known active DM/group/channel
+- `/stats` - Show active groups/channels, known private users, and users who started the bot
+
+The bot records chats after it receives updates from them. If a group/channel/DM has never interacted with this bot version, it will not be in the broadcast list yet.
+When Telegram sends a bot removal update, the removed chat is deleted from MongoDB so `/stats` stays current.
 
 ### Step 4: How It Works
 

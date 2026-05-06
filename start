@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SERVICE_NAME="${SERVICE_NAME:-bioanalyser-bot}"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BOT_FILE="$APP_DIR/bio.py"
+ENV_FILE="$APP_DIR/.env"
+PYTHON_BIN="${PYTHON_BIN:-$APP_DIR/venv/bin/python}"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+info() {
+    printf '[BioAnalyser] %s\n' "$*"
+}
+
+fail() {
+    printf '[BioAnalyser] ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+require_file() {
+    local path="$1"
+    local message="$2"
+    [ -f "$path" ] || fail "$message"
+}
+
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || fail "$1 is required but not installed."
+}
+
+if [ "$(uname -s)" != "Linux" ]; then
+    fail "This permanent start script is for Linux VPS servers only."
+fi
+
+require_command systemctl
+require_file "$BOT_FILE" "bio.py not found. Run this script from the BioAnalyser folder."
+require_file "$ENV_FILE" ".env not found. Create it from .env.example and add your bot credentials."
+
+if [ ! -x "$PYTHON_BIN" ]; then
+    fail "Virtualenv Python not found at $PYTHON_BIN. Run: python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt"
+fi
+
+missing_env=()
+for key in API_ID API_HASH BOT_TOKEN MONGO_URI; do
+    if ! grep -Eq "^[[:space:]]*${key}=" "$ENV_FILE"; then
+        missing_env+=("$key")
+    fi
+done
+
+if [ "${#missing_env[@]}" -gt 0 ]; then
+    fail ".env is missing: ${missing_env[*]}"
+fi
+
+"$PYTHON_BIN" - <<'PY'
+import motor
+import pyrogram
+import dotenv
+PY
+
+"$PYTHON_BIN" -m py_compile "$BOT_FILE" "$APP_DIR/config.py" "$APP_DIR/helper/utils.py"
+
+SUDO=""
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    require_command sudo
+    SUDO="sudo"
+fi
+
+RUN_USER="${RUN_USER:-${SUDO_USER:-$(id -un)}}"
+RUN_GROUP="${RUN_GROUP:-$(id -gn "$RUN_USER")}"
+
+tmp_service="$(mktemp)"
+cat > "$tmp_service" <<EOF
+[Unit]
+Description=BioAnalyser Telegram Bot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=$RUN_USER
+Group=$RUN_GROUP
+WorkingDirectory=$APP_DIR
+Environment=PYTHONUNBUFFERED=1
+ExecStart=$PYTHON_BIN $BOT_FILE
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=10
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+info "Installing systemd service: $SERVICE_NAME"
+$SUDO install -m 0644 "$tmp_service" "$SERVICE_FILE"
+rm -f "$tmp_service"
+
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable "$SERVICE_NAME"
+$SUDO systemctl restart "$SERVICE_NAME"
+
+sleep 2
+
+if $SUDO systemctl is-active --quiet "$SERVICE_NAME"; then
+    info "Bot is running permanently under systemd."
+    info "Logs: sudo journalctl -u $SERVICE_NAME -f"
+    info "Status: sudo systemctl status $SERVICE_NAME"
+    info "Restart: sudo systemctl restart $SERVICE_NAME"
+else
+    $SUDO systemctl status "$SERVICE_NAME" --no-pager || true
+    info "Recent logs:"
+    $SUDO journalctl -u "$SERVICE_NAME" -n 50 --no-pager || true
+    fail "Service did not start. Check the logs above."
+fi
