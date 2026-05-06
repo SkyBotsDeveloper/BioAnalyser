@@ -47,7 +47,7 @@ OWNER_IDS = _env_int_set("OWNER_ID", "OWNER_IDS")
 # Validate that all required environment variables are set
 if not all([API_ID, API_HASH, BOT_TOKEN, MONGO_URI]):
     raise ValueError(
-        "❌ CRITICAL: Missing required environment variables!\n"
+        "CRITICAL: Missing required environment variables!\n"
         "Please create a .env file in your project root with:\n"
         "  API_ID=your_api_id\n"
         "  API_HASH=your_api_hash\n"
